@@ -1,7 +1,10 @@
 [build]
   command = "npm install"
   functions = "functions"
-  publish = "functions"  # Optional, since this is an API-only project
+  publish = "functions"
 
 [functions]
   node_bundler = "esbuild"
+  [functions.scrape]
+    memory = 1024  # 1GB memory
+    timeout = 30   # 30 seconds timeout
