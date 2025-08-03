@@ -3,46 +3,71 @@ const cheerio = require("cheerio");
 
 exports.handler = async (event) => {
   try {
-    const baseUrl = "https://drive2.cscloud12.online/server1/qmsyfzbjcavekxfuwqbi/Movies/2022-01-30/CineSubz.com%20-%20Bro%20Daddy%20(2022)%20Malayalam%20TRUE%20WEB-DL-480P.mp4";
+    // Step 1: Start with the initial URL
+    const initialUrl = "https://drive2.cscloud12.online/server1/qmsyfzbjcavekxfuwqbi/Movies/2022-01-30/CineSubz.com%20-%20Bro%20Daddy%20(2022)%20Malayalam%20TRUE%20WEB-DL-480P.mp4";
 
-    // Fetch HTML (simulating the target page)
-    const response = await axios.get(baseUrl, {
+    // Fetch the initial page
+    const initialResponse = await axios.get(initialUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0",
       },
+      maxRedirects: 0, // Prevent following redirects to analyze the response
     });
 
-    // Parse HTML with cheerio
-    const $ = cheerio.load(response.data);
+    let directDownloadUrl = null;
 
-    // Assume buttons are <a> tags or <button> with specific classes/ids based on the image
-    const links = [];
-    $("button.google-btn, a.google-btn").each((i, el) => {
-      const href = $(el).attr("href") || $(el).attr("onclick")?.match(/'([^']+)'/)?.[1];
-      if (href) links.push(href);
-    });
-    $("button.direct-btn, a.direct-btn").each((i, el) => {
-      const href = $(el).attr("href") || $(el).attr("onclick")?.match(/'([^']+)'/)?.[1];
-      if (href) links.push(href);
+    // Check if the initial page contains the direct download link
+    if (initialResponse.status === 200) {
+      const $ = cheerio.load(initialResponse.data);
+      // Assume "Direct Download 2" button has a specific class or ID
+      const directButton = $("button.direct-btn, a.direct-btn").filter((i, el) => 
+        $(el).text().includes("Direct Download 2")
+      ).first();
+      if (directButton.length) {
+        directDownloadUrl = directButton.attr("href") || directButton.attr("onclick")?.match(/'([^']+)'/)?.[1];
+      }
+    }
+
+    // If no link found from button, use the provided direct download URL
+    if (!directDownloadUrl) {
+      directDownloadUrl = "https://07.cscloud12.online/cscloud?file=DmA29cSv%2BmlQvfLoyuDhx8M2szYQ1CsimrxAZAT3a5%2F7arxq0a2KtAuBkcynGyQC&expiry=GpolzaWzwypLpQMDjHwYsA%3D%3D&mac=eb5294dfd6cecff950c54487b4571521d2e616fae51ad20daa05ac500c06d5e3&acc=7";
+    }
+
+    // Step 2: Process the direct download URL
+    const downloadResponse = await axios.get(directDownloadUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
+      maxRedirects: 5, // Allow redirects to follow to the final download
+      validateStatus: (status) => status < 400, // Accept redirects
     });
 
-    // If no specific links are found, use the base URL with assumed variations
-    const downloadLinks = links.length > 0 ? links : [
-      `${baseUrl}?server=1`, // Google Download 1
-      `${baseUrl}?server=2`, // Google Download 2
-      `${baseUrl}?direct=2`  // Direct Download 2
-    ];
+    let finalDownloadUrl = directDownloadUrl;
+    if (downloadResponse.request.res.responseUrl) {
+      finalDownloadUrl = downloadResponse.request.res.responseUrl; // Get the final URL after redirects
+    }
 
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        message: "✅ Final Working URL",
-        baseUrl: baseUrl,
-        downloadLinks: downloadLinks
+        message: "✅ Final Download URL",
+        initialUrl: initialUrl,
+        directDownloadUrl: directDownloadUrl,
+        finalDownloadUrl: finalDownloadUrl,
       }),
     };
   } catch (error) {
+    if (error.response && error.response.status === 302) {
+      return {
+        statusCode: 200,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "✅ Redirected Download URL",
+          finalDownloadUrl: error.response.headers.location,
+        }),
+      };
+    }
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
