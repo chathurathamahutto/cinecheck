@@ -1,0 +1,19 @@
+{
+  "name": "url-scraper-api",
+  "version": "1.0.0",
+  "description": "Netlify Function to scrape and process URLs",
+  "main": "functions/scrape.js",
+  "scripts": {
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.34.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
