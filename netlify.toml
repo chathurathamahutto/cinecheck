@@ -1,0 +1,7 @@
+[build]
+  command = "npm install"
+  functions = "functions"
+  publish = "functions"  # Optional, since this is an API-only project
+
+[functions]
+  node_bundler = "esbuild"
